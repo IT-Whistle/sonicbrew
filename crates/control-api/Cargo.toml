@@ -1,0 +1,28 @@
+[package]
+name = "control-api"
+description = "M13 — REST control API (axum/hyper) over the session store"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+session-store.workspace = true
+audio-graph-bsd.workspace = true
+axum.workspace = true
+hyper.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+# Provides `ServiceExt::oneshot` for in-process REST integration tests
+# (avoids adding reqwest as a workspace dependency).
+tower = { version = "0.5", features = ["util"] }
+tokio = { workspace = true, features = ["test-util", "macros"] }
+proptest = "1"

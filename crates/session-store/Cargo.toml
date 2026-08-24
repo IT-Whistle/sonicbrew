@@ -1,0 +1,29 @@
+[package]
+name = "session-store"
+description = "M07 — topology session store (redb WAL + openraft single-node self-leader)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+audio-graph-bsd.workspace = true
+redb.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+tokio.workspace = true
+# P1 consensus foundation: RaftTypeConfig + (future) RaftLogStore /
+# RaftStateMachine implementations. `bincode` binary-encodes log entries and
+# snapshot payloads; `async-trait` satisfies openraft's async trait bounds.
+openraft.workspace = true
+async-trait.workspace = true
+bincode.workspace = true
+
+[dev-dependencies]
+audio-graph-bsd.workspace = true
+proptest = "1"

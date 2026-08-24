@@ -1,0 +1,21 @@
+[package]
+name = "gw-browser-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+gw-browser = { path = ".." }
+
+[[bin]]
+name = "ws_parser"
+path = "fuzz_targets/ws_parser.rs"
+test = false
+doc = false
+
+# Exclude this fuzz crate from the parent sonicbrew workspace.
+[workspace]

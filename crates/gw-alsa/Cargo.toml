@@ -1,0 +1,27 @@
+[package]
+name = "gw-alsa"
+description = "M11 (P2) — ALSA gateway (libasound FFI deferred)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+# libasound `.so` C-ABI PCM plugin (deferred). Default OFF so the crate builds
+# and tests on hosts without libasound2-dev installed. When implemented this
+# will gate the `extern "C"` FFI against `libasound.so` (see `src/lib.rs`'s
+# `plugin` module stub).
+alsa = []
+
+[dependencies]
+audio-core-bsd.workspace = true
+audio-graph-bsd.workspace = true
+rtrb.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+proptest = "1"

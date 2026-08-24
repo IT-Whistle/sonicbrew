@@ -1,0 +1,54 @@
+[package]
+name = "sonicbrew"
+description = "sonicbrew distributed audio server — MVP binary"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+# Integration point: the binary wires the MVP modules together.
+# audio-io-bsd is deliberately NOT pulled in: the MVP binary has no speaker
+# path, and audio-io-bsd would drag in cpal (ALSA) / opus C deps that are
+# absent on the dev host (BUILD-PLAN §6, p11 decision #5).
+audio-core-bsd.workspace = true
+audio-graph-bsd.workspace = true
+session-store.workspace = true
+audio-engine.workspace = true
+gw-browser.workspace = true
+control-api.workspace = true
+# M14 monitor owns per-cycle latency measurement (p11 §7c resolved): the RT
+# thread records each cycle's elapsed microseconds via MetricsRecorder and the
+# self-test asserts a non-empty Prometheus export. Replaces the MVP's ad-hoc
+# std::time::Instant placeholder logging.
+monitor.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+# Preset sidecar autosave: `run_server_engine` serializes the exported graph
+# state (kind/params included) to JSON on a dedicated thread.
+serde_json.workspace = true
+# Optional Bluetooth A2DP input backend (Part B). Behind the non-default
+# `bluetooth` feature. `a2dp-sink` must be enabled on audio-bluetooth-bsd so
+# its `BtInputSource` (worker module) is visible; the crate's own
+# cfg(target_os="freebsd") gates keep the FreeBSD-only OSS leaf off the Linux
+# type-check. rtrb is the ring bridge between BtInputSource and the graph.
+audio-io-bsd = { workspace = true, optional = true }
+audio-bluetooth-bsd = { workspace = true, optional = true, features = ["a2dp-sink"] }
+rtrb = { workspace = true, optional = true }
+# Optional interactive diagnostic TUI (`--diagnose`), built on ratatui-ppalla.
+ratatui-ppalla = { version = "0.0.4", optional = true }
+ratatui = { version = "0.29", optional = true }
+crossterm = { version = "0.28", optional = true }
+
+[features]
+default = []
+# Bluetooth A2DP input: BtInputSource → rtrb → RingSource. FreeBSD runtime;
+# compiles (type-checks) on Linux via the crate's own cfg gates.
+bluetooth = ["dep:audio-io-bsd", "dep:audio-bluetooth-bsd", "dep:rtrb"]
+# Interactive diagnostic TUI — visualises signal flow, graph topology, and
+# RT-safety/latency metrics without audio hardware (headless FreeBSD VM friendly).
+diagnose = ["dep:ratatui-ppalla", "dep:ratatui", "dep:crossterm"]

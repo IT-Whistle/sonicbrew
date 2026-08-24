@@ -1,0 +1,16 @@
+[package]
+name = "monitor"
+description = "M14 (P1) — metrics / observability sink"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+metrics.workspace = true
+tracing.workspace = true
+tokio.workspace = true
+serde.workspace = true

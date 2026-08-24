@@ -1,0 +1,57 @@
+[package]
+name = "net-rtp-aes67"
+description = "M09 (P1) — RTP / AES67 networked audio transport"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+default = []
+# Zero-copy netmap transport: FreeBSD runtime only, off by default. The raw
+# ring I/O (NIOCREGIF + mmap + send_raw/recv_raw/sync ioctls) is real; RTP
+# framing over the rings is still deferred. The backend is cfg(unix)-gated so
+# `cargo check --features netmap` type-checks (and lints) on the Linux host;
+# libc stays an OPTIONAL dep so default builds pull nothing extra.
+netmap = ["dep:libc"]
+
+[lints]
+workspace = true
+
+[dependencies]
+audio-core-bsd.workspace = true
+audio-graph-bsd.workspace = true
+rtrb.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+# Optional: raw ioctl/mmap FFI for the netmap backend (feature "netmap").
+libc = { version = "0.2", optional = true }
+
+[dev-dependencies]
+proptest = "1"
+criterion.workspace = true
+# Example-only (examples/netmap_probe.rs): raw ioctl FFI for the FreeBSD
+# netmap capability probe, also available to test/example builds when the
+# netmap feature is off. Not part of the library surface.
+libc = "0.2"
+
+[[bench]]
+name = "rtp_codec"
+harness = false
+
+# Examples needing the netmap feature (libc FFI + /dev/netmap runtime).
+# netmap_probe is cfg-gated per-target internally and builds anywhere;
+# nm_port_test exercises netmap_core (feature-gated module), so it only
+# exists when the feature is on.
+[[example]]
+name = "nm_port_test"
+path = "examples/nm_port_test.rs"
+required-features = ["netmap"]
+
+[[example]]
+name = "vale_loopback"
+required-features = ["netmap"]
+
+[[example]]
+name = "vale_diag"
+required-features = ["netmap"]

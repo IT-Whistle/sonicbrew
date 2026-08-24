@@ -1,0 +1,87 @@
+# sonicbrew — distributed audio server workspace.
+#
+# Foundation: 8 member crates (1 binary + 7 libraries). Member crates
+# consume audio-toolkit crates FROM CRATES.IO per ADR 0001 (NOT path deps).
+[workspace]
+resolver = "2"
+members = [
+    "crates/session-store",
+    "crates/net-rtp-aes67",
+    "crates/gw-pulse",
+    "crates/gw-alsa",
+    "crates/gw-browser",
+    "crates/control-api",
+    "crates/monitor",
+    "crates/audio-engine",
+    "crates/sonicbrew",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "BSD-2-Clause"
+
+# --- Dependency catalog ------------------------------------------------------
+# audio-toolkit crates: crates.io, pinned exactly (see ADR 0001).
+# audio-graph-bsd enables its non-default `topology` feature here so all
+# consumers see TopologySnapshot / Mutation / TopologyEvent.
+# audio-opus-bsd is declared plain; consumers opt in via a per-crate `opus`
+# feature because it links the system libopus.
+[workspace.dependencies]
+audio-core-bsd = "0.1.1"
+audio-graph-bsd = { version = "0.4.0", features = ["topology", "distributed"] }
+audio-dsp-bsd = "0.3.1"
+audio-resample-bsd = "0.2.1"
+audio-opus-bsd = "0.1.2"
+audio-codec-bsd = "0.1.1"
+audio-io-bsd = "0.3.1"
+audio-plugin-bsd = "0.1.1"
+audio-clock-bsd = "0.1.1"
+
+# Internal workspace members (path deps for siblings only).
+session-store = { path = "crates/session-store" }
+gw-browser = { path = "crates/gw-browser" }
+control-api = { path = "crates/control-api" }
+monitor = { path = "crates/monitor" }
+audio-engine = { path = "crates/audio-engine" }
+
+# Optional Bluetooth A2DP input backend (Part B): behind the binary's
+# non-default `bluetooth` feature. FreeBSD runtime; type-checks on Linux via
+# the crate's own cfg(target_os="freebsd") gates.
+audio-bluetooth-bsd = "0.1.0"
+
+# Shared infrastructure crates.
+tokio = { version = "1", features = ["full"] }
+redb = "2"
+axum = "0.7"
+hyper = { version = "1", features = ["full"] }
+tokio-tungstenite = "0.23"
+metrics = "0.23"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+rtrb = "0.3"
+thiserror = "2"
+criterion = { version = "0.5", default-features = false, features = ["plotters", "cargo_bench_support"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+# Stream/Sink combinators for tokio-tungstenite's `WebSocketStream` (split,
+# next, send). A direct (non-transitive) dependency so the gateway can name it.
+futures-util = "0.3"
+
+# Multi-node consensus (P1): openraft drives the Raft state machine, async-trait
+# is required by openraft's RaftLogStore/RaftStateMachine trait definitions, and
+# bincode provides the binary encoding for log entries / snapshot payloads.
+# `serde` feature is mandatory so Mutation / TopologySnapshot round-trip through
+# openraft's OptionalSerde bound (see ADR-0003).
+openraft = { version = "0.9", features = ["serde", "storage-v2"] }
+async-trait = "0.1"
+bincode = "1"
+
+# --- Lints -------------------------------------------------------------------
+# Members inherit via `[lints] workspace = true`. `-D warnings` is enforced on
+# the command line (CI / clippy invocation), not here, so the tables stay
+# minimal and per-crate opt-ins remain possible.
+[workspace.lints.rust]
+
+[workspace.lints.clippy]

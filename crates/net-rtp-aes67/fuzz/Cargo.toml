@@ -1,0 +1,20 @@
+[package]
+name = "net-rtp-aes67-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+net-rtp-aes67 = { path = ".." }
+
+[[bin]]
+name = "rtp_packet_parser"
+path = "fuzz_targets/rtp_packet_parser.rs"
+test = false
+doc = false
+
+[workspace]

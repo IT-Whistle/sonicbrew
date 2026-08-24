@@ -1,0 +1,29 @@
+# sonicbrew — ALSA PCM plugin `.so` (M11, P2).
+#
+# Builds `libasound_module_pcm_sonicbrew.so`: the C-ABI PCM plugin libasound
+# dlopens for `pcm.* { type sonicbrew ... }` definitions (ioplug framework).
+#
+# STANDALONE ON PURPOSE: the sonicbrew root workspace does not list this crate
+# yet — the orchestrator registers it (see docs/PROGRESS). The empty
+# [workspace] table keeps cargo from attaching the crate to the parent
+# workspace, so it builds and tests in isolation on the Linux dev host.
+[package]
+name = "gw-alsa-plugin"
+description = "M11 (P2) — libasound PCM plugin .so (ioplug + local-socket f32 bridge)"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.85"
+license = "BSD-2-Clause"
+
+[workspace]
+
+[lib]
+# alsa-lib dlopens PCM plugins as "libasound_module_pcm_<type>.so"; the lib
+# name must match that convention for `type sonicbrew` to resolve.
+name = "asound_module_pcm_sonicbrew"
+crate-type = ["cdylib"]
+
+[dependencies]
+# std only — the bridge is pure Rust and the FFI surface links libasound.
+
+[dev-dependencies]

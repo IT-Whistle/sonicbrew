@@ -1,0 +1,37 @@
+[package]
+name = "gw-browser"
+description = "M12 — browser gateway (WebSocket transport via tokio-tungstenite)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[features]
+# Opus encode/decode for low-bitrate browser streams. Off by default because
+# audio-opus-bsd links the system libopus (C dep); enable when the host has it.
+default = []
+opus = ["dep:audio-opus-bsd"]
+
+[lints]
+workspace = true
+
+[dependencies]
+audio-core-bsd.workspace = true
+audio-graph-bsd.workspace = true
+tokio-tungstenite.workspace = true
+tokio.workspace = true
+rtrb.workspace = true
+serde.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+futures-util.workspace = true
+audio-opus-bsd = { workspace = true, optional = true }
+
+[dev-dependencies]
+proptest = "1"
+audio-dsp-bsd = { version = "0.3.1", default-features = false }
+criterion.workspace = true
+
+[[bench]]
+name = "ws_round_trip"
+harness = false

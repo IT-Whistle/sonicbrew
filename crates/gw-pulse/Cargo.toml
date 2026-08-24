@@ -1,0 +1,20 @@
+[package]
+name = "gw-pulse"
+description = "M10 (P1) — PulseAudio gateway (libpulse FFI deferred)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+audio-core-bsd.workspace = true
+audio-graph-bsd.workspace = true
+rtrb.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+proptest = "1"

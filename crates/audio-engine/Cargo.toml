@@ -1,0 +1,21 @@
+[package]
+name = "audio-engine"
+description = "Runtime orchestration: owns the live audio Graph, drives process_cycle + flush_sinks, and swaps rebuilt graphs between cycles (TopologyEvent-driven live rebuild foundation)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+audio-codec-bsd.workspace = true
+audio-core-bsd.workspace = true
+audio-graph-bsd.workspace = true
+session-store.workspace = true
+rtrb.workspace = true
+serde.workspace = true
+tokio.workspace = true
+thiserror.workspace = true
+tracing.workspace = true

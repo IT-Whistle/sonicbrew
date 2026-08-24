@@ -1,0 +1,5 @@
+# Stable toolchain satisfies the MSRV floor of 1.85 (declared in
+# `[workspace.package] rust-version` and clippy.toml). Deliberately NOT pinned
+# to a specific version so CI picks up the latest stable.
+[toolchain]
+channel = "stable"

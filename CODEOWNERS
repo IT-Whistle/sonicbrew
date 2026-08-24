@@ -1,0 +1,45 @@
+# CODEOWNERS · sonicbrew (통합 오디오 서버)
+#
+# 본 파일은 sonicbrew 서브프로젝트(M07–M14 + 바이너리)의 GitHub 코드 소유권 규칙을 정의한다.
+# 변경 발생 시 해당 영역의 소유자가 자동으로 리뷰어로 지정된다.
+# 포맷: <path> <@username1> <@username2>
+#
+# ⚠️ 아래 @username 값은 플레이스홀더이다. 실제 GitHub 사용자명/팀명으로 교체하라.
+#
+# 모듈 ID/경로는 P10 통합 아키텍처(§3.2) 및 P11 MVP 스코프(§2)에 정렬.
+# crates/ 경로는 Cargo 워크스페이스가 구성되기 전 예상 경로(소스 미구축 상태).
+# sonicbrew → audio-toolkit 의존: sonicbrew 모듈은 audio-toolkit의 AudioNode/Gateway/SessionStore
+# trait를 구현·소비하므로, trait 계약 변경은 양 서브프로젝트 오너가 공동 리뷰해야 한다.
+# 조직 전체 소유권은 umbrella CODEOWNERS(../CODEOWNERS)를 참조.
+
+# ========== 기본 (sonicbrew 전체) ==========
+*                               @project-lead @tech-lead
+
+# ========== 거버넌스 & 문서 ==========
+/README.md                      @project-lead @tech-lead
+/CONTRIBUTING.md                @project-lead @tech-lead
+/CODEOWNERS                     @project-lead @tech-lead
+
+# ========== 세션 합의 / 제어 API (L3 / L5, P0 — 분산 핵심) ==========
+# M07 session-store (openraft 단일노드 + WAL), M13 control-api (gRPC/REST 제어 평면)
+/crates/session-store/          @tech-lead
+/crates/control-api/            @tech-lead
+
+# ========== 네트워크 오디오 전송 (L4, P1 — netmap/AES67 전문) ==========
+# M09 net-rtp-aes67 (RTP/AES67 zero-copy + FEC)
+/crates/net-rtp-aes67/          @net-audio-maintainer
+
+# ========== 게이트웨이 (L5 — 프로토콜 호환 + 보안) ==========
+# M10 gw-pulse (PulseAudio 호환), M11 gw-alsa (ALSA 에뮤), M12 gw-browser (WebSocket/WebRTC)
+/crates/gw-pulse/               @gateway-tech-lead
+/crates/gw-alsa/                @gateway-tech-lead
+/crates/gw-browser/             @gateway-tech-lead
+
+# ========== 관측성 (L5, P1 — 인프라) ==========
+# M14 monitor (kqueue 기반 메트릭/트레이싱)
+/crates/monitor/                @devops-lead
+
+# ========== 바이너리 크레이트 (통합 진입점) ==========
+# sonicbrew (7 모듈 통합 서버 바이너리)
+/crates/sonicbrew/              @tech-lead
+/src/                           @tech-lead
