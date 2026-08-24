@@ -38,9 +38,9 @@ already ships world-class primitives.
 
 | Technology | What it gives sonicbrew | Layer | Status |
 |---|---|---|---|
-| **netmap(4) / VALE** | Zero-copy RTP transport: shared-memory rings + in-kernel software switch | L4 (`net-rtp-aes67`) | verified live (loopback 8/8) |
-| **OSS `/dev/dsp`** | Local audio output through `snd(4)`/`pcm(4)`/`snd_hda(4)` | L1 (`audio-io-bsd`, cpal gate) | blocked on audio hardware in the VM |
-| **kqueue(2)** | Single-syscall multiplexing of timers + fd readiness for the monitor | L5 (`monitor`) | design intent; gated stub shipped |
+| **netmap(4) / VALE** | Zero-copy RTP transport: shared-memory rings + in-kernel software switch | `net-rtp-aes67` | verified live (loopback 8/8) |
+| **OSS `/dev/dsp`** | Local audio output through `snd(4)`/`pcm(4)`/`snd_hda(4)` | `audio-io-bsd` (upstream toolkit, cpal gate) | blocked on audio hardware in the VM |
+| **kqueue(2)** | Single-syscall multiplexing of timers + fd readiness for the monitor | `monitor` | design intent; gated stub shipped |
 | **jail(8)** | Per-module privilege separation at deployment time | ops | FUTURE (§5) |
 | **ZFS** | Snapshot-based preset/state backup | ops | FUTURE (§5) |
 | **capsicum(4)** | Capability sandbox for the control plane | ops | FUTURE (§5) |
@@ -54,7 +54,7 @@ operational wrappers applied when scaling out.
 
 ## 2. netmap(4): Zero-Copy Packet I/O
 
-This is the flagship FreeBSD integration: the L4 `net-rtp-aes67` crate's
+This is the flagship FreeBSD integration: the `net-rtp-aes67` crate's
 `netmap` feature moves RTP audio through kernel shared-memory rings with no
 socket copies at all.
 
@@ -367,7 +367,7 @@ framework, hardware drivers like `snd_hda(4)` plug into it, and applications
 see plain character devices `/dev/dsp*` — `open`, `write` interleaved PCM,
 `ioctl` for format/rate/channels. No daemon sits in the way; the mixing that
 Linux does in PulseAudio/PipeWire happens in-kernel via `snd(4)`'s virtual
-channels. This simplicity is why the L1 layer (`audio-io-bsd`, part of
+channels. This simplicity is why `audio-io-bsd` (part of
 audio-toolkit) treats OSS as the native local-output path.
 
 ### 3.2 Why the test VM cannot exercise it
@@ -390,11 +390,11 @@ works but adds latency and emulation limits (no direct hardware access,
 weaker concurrent-playback and hotplug behavior). The performance budget
 ([PERFORMANCE](./PERFORMANCE.md)): local playback target < 5 ms theoretical
 (256-frame buffer at 48 kHz = 5.3 ms), with a measured < 10 ms allowance
-while the via-ALSA overhead is tolerated (P11 §7c).
+while the via-ALSA overhead is tolerated.
 
 ### 3.4 Decision #5: the direct-OSS escape hatch
 
-p11 decision #5 (revisit after P12 benchmarks, P10 §11.4 #2): if measured
+decision point (revisit after benchmarks): if measured
 cpal-via-ALSA latency exceeds 10 ms, sonicbrew builds a **direct OSS
 backend** — open `/dev/dsp` itself and drop the emulation detour. The
 workspace already contains the pattern to follow: ADR-0002's Bluetooth input
@@ -409,7 +409,7 @@ would take, minus the virtual device.
 ### 4.1 Design intent
 
 FreeBSD's `kqueue(2)`/`kevent(2)` is the event-notification facility the
-monitor module (M14) is designed around long-term: a single syscall that
+monitor module is designed around long-term: a single syscall that
 multiplexes **timers and fd readiness** — one kqueue could drive the metrics
 sampling timer and watch the audio-device fds together, replacing a poll
 thread per interest. The module docs (`crates/monitor/src/lib.rs`, "kqueue
@@ -422,11 +422,11 @@ What ships today is the portable core: `MetricsRecorder` (sliding-window
 latency p50/p99, xrun counters, RT-safe O(1) locked push) plus `serve_metrics`
 — a raw-HTTP `GET /metrics` endpoint exposing Prometheus text (default
 `--metrics-addr 127.0.0.1:9003`). The kqueue path exists as a **gated stub**,
-`spawn_kqueue_loop()`, which returns an explicit "not implemented in P1"
+`spawn_kqueue_loop()`, which returns an explicit "not implemented yet"
 error, and the crate carries **no `kqueue`/`nix` dependency** — those crates
 do not build on the Linux dev host and would break the compile-anywhere
 discipline (§7). Notably, p11's kernel-dependency table lists kqueue as *the
-only* FreeBSD kernel dependency the MVP actually requires (M13 minimum) —
+only* FreeBSD kernel dependency the MVP actually requires —
 everything heavier was pushed to the scaling-out phase.
 
 ---
@@ -460,7 +460,7 @@ No code exists for this yet.
 
 ### 5.3 capsicum(4) — control-plane sandbox
 
-The control API's authorization design (p10 §8 M13, distilled in KNOWLEDGE)
+The control API's authorization design (distilled in KNOWLEDGE)
 pairs mTLS with Capsicum restriction: after startup the API process drops
 into capability mode so that even a compromised handler cannot open arbitrary
 paths or sockets. This is the deepest of the three integrations (it requires

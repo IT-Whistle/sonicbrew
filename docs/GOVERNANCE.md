@@ -1,6 +1,6 @@
 # sonicbrew · Unified Server Governance
 
-> **Document role:** This document defines governance **specific** to the sonicbrew subproject (M07–M14 + the binary). Organization-wide governance has the [umbrella GOVERNANCE](../../GOVERNANCE.md) as its top-level source, and this document stands in a **delegation** relationship to it — matters not explicitly stated in this document follow the umbrella policy.
+> **Document role:** This document defines governance **specific** to the sonicbrew subproject. Organization-wide governance has the [umbrella GOVERNANCE](../../GOVERNANCE.md) as its top-level source, and this document stands in a **delegation** relationship to it — matters not explicitly stated in this document follow the umbrella policy.
 >
 > **Related documents:** [CONTRIBUTING.md](../CONTRIBUTING.md) · [ARCHITECTURE.md](./ARCHITECTURE.md) · [CODEOWNERS](../CODEOWNERS) · [umbrella GOVERNANCE](../../GOVERNANCE.md)
 
@@ -17,7 +17,7 @@ sonicbrew GOVERNANCE.md (this document — sonicbrew-subproject-only augmentatio
 ```
 
 - **On conflict:** umbrella policy takes precedence.
-- **Augmentation scope:** this document defines only rules specific to the development, review, and deployment of the sonicbrew modules (M07–M14).
+- **Augmentation scope:** this document defines only rules specific to the development, review, and deployment of the sonicbrew modules.
 
 ---
 
@@ -28,10 +28,10 @@ sonicbrew GOVERNANCE.md (this document — sonicbrew-subproject-only augmentatio
 | Role | sonicbrew-specific responsibilities |
 |------|-----------------|
 | **Project Lead** | sonicbrew roadmap priorities, final approval of production deployments |
-| **Tech Lead** | Approval of RT audio paths, `session-store` (M07) consensus design, approval of audio-toolkit dependency contracts |
-| **Gateway Tech Lead** | Compatibility and security decisions for gateway protocols (M10/M11/M12), protocol regression gates |
-| **Net Audio Maintainer** | `net-rtp-aes67` (M09) zero-copy/netmap paths, AES67 standards compliance |
-| **DevOps Lead** | `monitor` (M14) observability, environment (jail/bhyve/carp) infrastructure |
+| **Tech Lead** | Approval of RT audio paths, `session-store` consensus design, approval of audio-toolkit dependency contracts |
+| **Gateway Tech Lead** | Compatibility and security decisions for gateway protocols, protocol regression gates |
+| **Net Audio Maintainer** | `net-rtp-aes67` zero-copy/netmap paths, AES67 standards compliance |
+| **DevOps Lead** | `monitor` observability, environment (jail/bhyve/carp) infrastructure |
 | **Security Officer** | Gateway security (mTLS/SRTP/Capsicum), audits of session secret management, veto |
 
 ---
@@ -47,13 +47,13 @@ sonicbrew GOVERNANCE.md (this document — sonicbrew-subproject-only augmentatio
 
 If any of the following applies, an [ADR](../../docs/adr/) is mandatory (sonicbrew-specific additions to umbrella §2.2):
 
-- **Gateway protocol compatibility change** — wire protocol changes to the PulseAudio protocol (M10) / ALSA PCM plugin (M11) / WebSocket frame format (M12). Breaks existing client compatibility.
-- **Session consensus design change** — `session-store` (M07) `openraft` mode transition (single-node → multi-node), WAL format/checksum structure, `SessionStore` trait contract change.
+- **Gateway protocol compatibility change** — wire protocol changes to the PulseAudio protocol / ALSA PCM plugin / WebSocket frame format. Breaks existing client compatibility.
+- **Session consensus design change** — `session-store` `openraft` mode transition (single-node → multi-node), WAL format/checksum structure, `SessionStore` trait contract change.
 - **RT audio path change** — thread-separation principles for gateway reception (RT boundary) and net-rtp transmit/receive, changes to the lock-free ring buffer (`rtrb`) boundary.
 - **audio-toolkit dependency contract change** — changes to the signatures of the audio-toolkit traits sonicbrew consumes (`AudioNode`/`Gateway`/`SessionStore`/`NetworkAudioTransport`), changes to the path dep structure. ⚠ Affects both subprojects.
 - **netmap/Capsicum/jail kernel feature dependency change** — inherited from umbrella §2.2 (netmap(4)/Capsicum/jails(8)).
-- **Session store schema change** — `session-store` (M07) redb/sled table structure.
-- **Control API contract change** — `control-api` (M13) gRPC/REST contract (backward compatibility).
+- **Session store schema change** — `session-store` redb/sled table structure.
+- **Control API contract change** — `control-api` gRPC/REST contract (backward compatibility).
 
 ### 2.3 Strategic decisions: RFC
 
@@ -67,9 +67,9 @@ In a production incident, the Tech Lead / Gateway Tech Lead acts immediately und
 | Incident type | Authority | Post-incident obligation |
 |----------|------|----------|
 | **xrun storm** (audio dropouts) | Tech Lead | Postmortem within 48 hours |
-| **Raft leader loss** (M07 session disruption) | Tech Lead | Postmortem within 48 hours |
-| **Gateway outage** (M10/M11/M12 client disruption) | Gateway Tech Lead | Postmortem within 48 hours |
-| **netmap NIC failure** (M09 RTP disruption) | Net Audio Maintainer | Verify fallback (standard socket) switchover |
+| **Raft leader loss** (session disruption) | Tech Lead | Postmortem within 48 hours |
+| **Gateway outage** (client disruption) | Gateway Tech Lead | Postmortem within 48 hours |
+| **netmap NIC failure** (RTP disruption) | Net Audio Maintainer | Verify fallback (standard socket) switchover |
 
 ---
 
@@ -93,7 +93,7 @@ production (FreeBSD host — carp(4) HA)
 | Secrets | `.env` (excluded from git) | `.env` (inside the VM) | per-host env (jail) | per-host env + `carp(4)` VIP |
 | Deploy permission | anyone | anyone (local VM) | Maintainer+ | Project Lead/Tech Lead |
 | WAL/schema migration | free | free (VM) | Maintainer approval | Tech Lead approval + prior backup mandatory |
-| **session-store(M07) Raft mode** | single-node (self-leader) | single-node | single-node | single-node (MVP) → multi-node (later) |
+| **session-store Raft mode** | single-node (self-leader) | single-node | single-node | single-node → multi-node (later) |
 | **audio-toolkit path dep** | local `../audio-toolkit/` | mounted into the VM | built artifacts | static build |
 
 ### 3.1 Production data access
@@ -148,10 +148,10 @@ module-name = crate name (session-store, net-rtp-aes67,
 | Change area | Minimum reviewers | Must include |
 |-----------|------------|----------|
 | General sonicbrew code | 1 | Maintainer or above |
-| **RT audio paths/core** (M09 transmit/receive, gateway RT boundary) | 2 | **Tech Lead** required |
-| **Gateway protocol / security** (M09/M10/M11/M12) | 2 | **Security Officer** required |
+| **RT audio paths/core** (RTP transmit/receive, gateway RT boundary) | 2 | **Tech Lead** required |
+| **Gateway protocol / security** | 2 | **Security Officer** required |
 | `Cargo.toml` / audio-toolkit dependencies | 2 | **Tech Lead** required |
-| `session-store` (M07) consensus/WAL | 2 | **Tech Lead** required |
+| `session-store` consensus/WAL | 2 | **Tech Lead** required |
 
 ### 5.2 Review checklist
 
@@ -161,7 +161,7 @@ module-name = crate name (session-store, net-rtp-aes67,
 - [ ] No alloc/lock on RT threads (reception runs on worker threads)
 - [ ] Gateway protocol backward compatibility preserved
 - [ ] FreeBSD VM regression pass (xrun/alloc/netmap)
-- [ ] session-store WAL checksum verification (M07)
+- [ ] session-store WAL checksum verification
 
 ### 5.3 Review turnaround
 
@@ -197,4 +197,3 @@ Changes to this document require approval from the Tech Lead or above + notifica
 - [umbrella GOVERNANCE](../../GOVERNANCE.md) — organization-wide top-level governance
 - [sonicbrew CONTRIBUTING](../CONTRIBUTING.md) — development environment and testing rules
 - [sonicbrew ARCHITECTURE](./ARCHITECTURE.md) — 5-layer distribution + dependency diagram
-- [P10 design.md](../../notes/p10-architecture-design.md) · [P11 MVP](../../notes/p11-mvp-scope-design.md) — design sources

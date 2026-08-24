@@ -1,6 +1,6 @@
 # sonicbrew Development Progress (PROGRESS)
 
-> **Document type:** **Development progress tracking document** for the sonicbrew subproject (M07–M14 + binary). Architecture: [ARCHITECTURE](./ARCHITECTURE.md), API: [REST-API](./REST-API.md), nodes: [AUDIO-NODES](./AUDIO-NODES.md), operations: [RUNBOOK](./RUNBOOK.md), decision history: [adr/](./adr/).
+> **Document type:** **Development progress tracking document** for the sonicbrew subproject. Architecture: [ARCHITECTURE](./ARCHITECTURE.md), API: [REST-API](./REST-API.md), nodes: [AUDIO-NODES](./AUDIO-NODES.md), operations: [RUNBOOK](./RUNBOOK.md), decision history: [adr/](./adr/).
 >
 > **Baseline date:** 2026-08-17 · gw-pulse daemon handshake (verified against real PA 17.0) + gw-alsa .so streaming (aplay end-to-end) + netmap probe (kernel API 14) complete · tests 566
 > **Workspace:** 9 crates (8 lib + 1 bin) · **566 unit/integration/property tests + 5 self-tests + 7 criterion benches passing** · **~15,500 lines of Rust source**
@@ -9,11 +9,11 @@
 
 ## 0. TL;DR
 
-- ✅ **All sonicbrew modules (M07–M14) implemented at the library level** (traits + codec/parser/negotiation logic + unit/integration tests). All that remains is wiring up the FreeBSD-only runtimes (libpulse·netmap·libasound FFI daemons).
+- ✅ **All sonicbrew modules implemented at the library level** (traits + codec/parser/negotiation logic + unit/integration tests). All that remains is wiring up the FreeBSD-only runtimes (libpulse·netmap·libasound FFI daemons).
 - ✅ **Outbound flush-gap resolved** — audio-graph-bsd `0.4.0` integrated ([§4 Option A](../../docs/audio-graph-bsd-engine-changes.md) of the engine changes plan). All 4 gateways' `RingSink` → `Graph::add_sink`, server RT loop calls `flush_sinks()` → **bidirectional audio working** (verified by self-test).
 - ✅ **Two hot-reload paths proven** — `--hot-reload-test` (`RtHandle::install` arc-swap) + `--live-rebuild-test` (`Graph::from_snapshot` topology-based rebuild, flush-compatible).
 - ✅ **audio-engine runtime orchestration + production server integration** — `GraphEngine` + `GatewayBridge` (survives rebuilds) + `spawn_rebuild_task` + `BuiltNode` (flush composition). **`--server-engine` mode**: the running server takes control-api REST topology changes → `from_snapshot` rebuild → engine swap → gateways (bridge) survive → **live reload works** (server alive after REST POST /nodes + /links · metrics recording confirmed).
-- ✅ **Operational observability** — M14 monitor + Prometheus `/metrics` HTTP endpoint.
+- ✅ **Operational observability** — monitor + Prometheus `/metrics` HTTP endpoint.
 - ✅ **Bluetooth input** — `audio-bluetooth-bsd` integrated behind the `bluetooth` feature gate (compiles on Linux, runs on FreeBSD).
 - ✅ **20 audio processing nodes** — `audio-engine::nodes` + `EngineServerFactory` kind dispatch.
 - ✅ **NodeSpec typed params** — the `NodeParams` enum enables parameterized creation of every kind via REST. All 20 kinds supported. **400 BadRequest on kind/variant mismatch + kind auto-inferred from variant when missing**. ADR 0005.
@@ -26,19 +26,19 @@
 
 ---
 
-## 1. Module roster (M07–M14 + binary)
+## 1. Module roster
 
-| ID | Crate | Layer | Pri | Status | Tests | Lines | Key technology |
-|----|----------|------|-----|------|:---:|:---:|------|
-| **M07** | `session-store` | L3 | P1 | ✅ P1 openraft multi-node | 31 | ~2300 | `SessionStore` trait + `DistributedRaftEngine` (openraft 0.9.25: leader election/log replication/snapshot + `RaftLogStore` + `RaftStateMachine` + cluster integration tests) + `RaftEngine` (single-node redB WAL persistence + in-memory `TopologySnapshot` + tokio broadcast). |
-| **M09** | `net-rtp-aes67` | L4 | P1 | ✅ codec+transport+loop+jitter (integrated) | 26 | ~1200 | RTP RFC 3550 codec + L16/L24 framing + `UdpTransport` (`recv_rtp_with_seq`) + recv/send worker loops + **`JitterBuffer` (wrap-aware reordering) integrated into the recv loop** (in-order decoding + loss skip). netmap is a `cfg(freebsd)` stub. |
-| **M10** | `gw-pulse` | L5 | P1 | ✅ parser+gateway | 19 | 670 | PulseAudio native protocol parser (20B header + SampleSpec + strings) + `PulseGateway` register. libpulse FFI deferred. |
-| **M11** | `gw-alsa` | L5 | P2 | ✅ domain+gateway | 17 | 760 | ALSA `snd_pcm_format_t` subset + hw_params constraint-narrowing negotiation + format mapping + `AlsaGateway`. libasound .so behind a feature gate. |
-| **M12** | `gw-browser` | L5 | P0 | ✅ MVP | 17 | 832 | WebSocket-only gateway (tokio-tungstenite) + audio-graph-bsd `RingSource`/`RingSink` + 6-byte wire format + Opus sub-path (`opus` feature). |
-| **M13** | `control-api` | L5 | P0 | ✅ MVP + CRUD + topology | 85 | ~1000 | `ControlApi` trait + REST (`GET/POST/DELETE /nodes`·`/links` + **`GET /topology`**) + `kind`/`params` + shared `KindRegistry`/`ParamsRegistry` + `NodeParams` typed enum (20 kinds) + **multi-port linking** (`from_port`/`to_port` + validation). |
-| **M14** | `monitor` | L5 | P1 | ✅ + `/metrics` | 6 | 450 | `MetricsRecorder` (latency p50/p99 + xrun + Prometheus export) + `serve_metrics` raw-HTTP. kqueue is a `cfg(freebsd)` stub. |
-| — | `sonicbrew` | (bin) | — | ✅ integration + engine server + typed params | 5 self-test | ~1800 | Server entry point: default mode (RT loop + WS/REST/`/metrics` + Bluetooth) + **`--server-engine`** (audio-engine + GatewayBridge + serve_with_io + spawn_rebuild_task — production live reload) + **`render_node`** (kind+params dispatch, 20 kinds) + 5 deterministic self-tests. |
-| — | `audio-engine` | (runtime) | — | ✅ live rebuild + gateway bridge + 20 processing nodes | 84 | ~2100 | `GraphEngine` + `build_graph` + `NodeFactory` + `spawn_rebuild_task` + `builtins` (3 kinds) + **`GatewayBridge`** + **20 audio nodes** (mixer/aux_send/eq/compressor/limiter/meter/channel_map/delay/noise_gate/noise_source/tone_generator/reverb/chorus/flanger/distortion/phaser/bitcrusher/file_source/tremolo/stereo_widener). |
+| Crate | Status | Tests | Lines | Key technology |
+|----------|--------|:---:|:---:|------|
+| `session-store` | ✅ openraft multi-node | 31 | ~2300 | `SessionStore` trait + `DistributedRaftEngine` (openraft 0.9.25: leader election/log replication/snapshots + `RaftLogStore` + `RaftStateMachine` + cluster integration tests) + `RaftEngine` (single-node redB WAL persistence + in-memory `TopologySnapshot` + tokio broadcast). |
+| `net-rtp-aes67` | ✅ codec+transport+loop+jitter (integrated) | 26 | ~1200 | RTP RFC 3550 codec + L16/L24 framing + `UdpTransport` (`recv_rtp_with_seq`) + recv/send worker loops + **`JitterBuffer` (wrap-aware reordering) integrated into the recv loop** (in-order decoding + loss skip). netmap is a `cfg(freebsd)` stub. |
+| `gw-pulse` | ✅ parser+gateway | 19 | 670 | PulseAudio native protocol parser (20B header + SampleSpec + strings) + `PulseGateway` register. libpulse FFI deferred. |
+| `gw-alsa` | ✅ domain+gateway | 17 | 760 | ALSA `snd_pcm_format_t` subset + hw_params constraint-narrowing negotiation + format mapping + `AlsaGateway`. libasound .so behind a feature gate. |
+| `gw-browser` | ✅ MVP | 17 | 832 | WebSocket-only gateway (tokio-tungstenite) + audio-graph-bsd `RingSource`/`RingSink` + 6-byte wire format + Opus sub-path (`opus` feature). |
+| `control-api` | ✅ MVP + CRUD + topology | 85 | ~1000 | `ControlApi` trait + REST (`GET/POST/DELETE /nodes`·`/links` + **`GET /topology`**) + `kind`/`params` + shared `KindRegistry`/`ParamsRegistry` + `NodeParams` typed enum (20 kinds) + **multi-port linking** (`from_port`/`to_port` + validation). |
+| `monitor` | ✅ + `/metrics` | 6 | 450 | `MetricsRecorder` (latency p50/p99 + xrun + Prometheus export) + `serve_metrics` raw-HTTP. kqueue is a `cfg(freebsd)` stub. |
+| `sonicbrew` (bin) | ✅ integration + engine server + typed params | 5 self-test | ~1800 | Server entry point: default mode (RT loop + WS/REST/`/metrics` + Bluetooth) + **`--server-engine`** (audio-engine + GatewayBridge + serve_with_io + spawn_rebuild_task — production live reload) + **`render_node`** (kind+params dispatch, 20 kinds) + 5 deterministic self-tests. |
+| `audio-engine` | ✅ live rebuild + gateway bridge + 20 processing nodes | 84 | ~2100 | `GraphEngine` + `build_graph` + `NodeFactory` + `spawn_rebuild_task` + `builtins` (3 kinds) + **`GatewayBridge`** + **20 audio nodes** (mixer/aux_send/eq/compressor/limiter/meter/channel_map/delay/noise_gate/noise_source/tone_generator/reverb/chorus/flanger/distortion/phaser/bitcrusher/file_source/tremolo/stereo_widener). |
 
 > **Test totals:** 566 unit/integration/property tests + 5 binary self-tests + 7 criterion benches. Linux + FreeBSD native both GREEN. fmt/clippy (`-D warnings`) / FreeBSD `cargo check` all GREEN.
 
@@ -48,7 +48,7 @@
 
 ### 2.1 Bidirectional audio (flush-gap resolved) ★
 Integrates audio-graph-bsd 0.4.0's `Flushable`/`SinkNode`/`Graph::add_sink`/`flush_sinks` (= [engine changes plan](../../docs/audio-graph-bsd-engine-changes.md) §4 Option A):
-- The 4 gateways' (M10/M11/M12/M09) `RingSink` registration: `add_node` → **`add_sink`** (flushable tracking).
+- The gateways' `RingSink` registration: `add_node` → **`add_sink`** (flushable tracking).
 - Server RT loop: every cycle, **`flush_sinks()`** (off-RT) after `process_cycle` → stash handed off to the outbound `rtrb`.
 - **Verification:** `--self-test` → `outbound peak=0.4999 after flush_sinks (1 sink)` (inbound = outbound peak match → proof of bidirectional flow).
 
@@ -112,7 +112,7 @@ audio-toolkit family (all from crates.io, no path deps):
 | `audio-bluetooth-bsd` | 0.1.0 | BT A2DP input (this project's 10th toolkit crate, `bluetooth` feature). |
 
 Common: tokio, redb, axum, hyper, tokio-tungstenite, metrics, tracing, rtrb, thiserror(2), serde, arc-swap(distributed).
-| `openraft` | **0.9.25** | Distributed Raft consensus (M07 `DistributedRaftEngine`: leader election/log replication/snapshot). `storage-v2` + `single-snapshot-data` features. |
+| `openraft` | **0.9.25** | Distributed Raft consensus (`DistributedRaftEngine`: leader election/log replication/snapshot). `storage-v2` + `single-snapshot-data` features. |
 
 ---
 
@@ -120,8 +120,8 @@ Common: tokio, redb, axum, hyper, tokio-tungstenite, metrics, tracing, rtrb, thi
 
 | ADR | Content | Location |
 |-----|------|------|
-| **0002** | `audio-bluetooth-bsd` backend approved (L1, not a sonicbrew module, feature-gate) | `docs/adr/0002-audio-bluetooth-bsd-backend.md` |
-| **0003** | openraft multi-node consensus (M07 session-store: single-node→multi-node, `DistributedRaftEngine`, WAL schema compatibility) | `docs/adr/0003-openraft-multi-node-consensus.md` |
+| **0002** | `audio-bluetooth-bsd` backend approved (not a sonicbrew module, feature-gate) | `docs/adr/0002-audio-bluetooth-bsd-backend.md` |
+| **0003** | openraft multi-node consensus (session-store: single-node→multi-node, `DistributedRaftEngine`, WAL schema compatibility) | `docs/adr/0003-openraft-multi-node-consensus.md` |
 | **0004** | 6 audio processing nodes (audio-engine::nodes + EngineServerFactory kind dispatch, shipped with default parameters) | `docs/adr/0004-audio-processing-nodes.md` |
 | **0005** | NodeSpec typed params (REST parameterized node creation, `NodeParams` enum + `ParamsRegistry`) | `docs/adr/0005-nodespec-typed-params.md` |
 | **0006** | Multi-port linking + GET /links + GET /topology (`LinkRequest` from_port/to_port + `LinkInfo` + `TopologyInfo`) | `docs/adr/0006-multi-port-linking-and-topology.md` |
@@ -131,7 +131,7 @@ Common: tokio, redb, axum, hyper, tokio-tungstenite, metrics, tracing, rtrb, thi
 
 ## 6. Future work
 
-> The build roadmap (Phases 1–5, M07–M14) is **closed with all modules complete** — see the §1 module roster and [adr/](./adr/) for the completion history. Only environment-/upstream-dependent items remain below.
+> The build roadmap (Phases 1–5) is **closed with all modules complete** — see the §1 module roster and [adr/](./adr/) for the completion history. Only environment-/upstream-dependent items remain below.
 
 ### FreeBSD VM environment needed
 | Item | Current status |
@@ -153,7 +153,7 @@ Common: tokio, redb, axum, hyper, tokio-tungstenite, metrics, tracing, rtrb, thi
 | `NodeSnapshot` kind/params fields | Root fix is persistence — currently worked around via the preset sidecar (§0) |
 
 ### Next decision points (conditional promotion)
-- **AES67 full compliance** (SAP/SDP, FEC, SRTP, PTP M16) — when expanding to distributed
+- **AES67 full compliance** (SAP/SDP, FEC, SRTP, PTP) — when expanding to distributed
 - **WebRTC** (str0m) — G4 phase after WebSocket MVP validation
 - **pre/post-fader send** — AuxSendNode extension
 - **Direct OSS backend** — if cpal-via-ALSA latency >10ms (p11 decision #5)

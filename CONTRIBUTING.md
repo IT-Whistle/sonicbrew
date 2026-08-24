@@ -1,6 +1,6 @@
 # sonicbrew server — Contribution Guide (CONTRIBUTING)
 
-> **Document status:** This guide defines contribution procedures, development environment, testing, and code-quality rules **specific** to the sonicbrew subproject (M07–M14 + the unified `sonicbrew` binary). The org-wide common contribution guide is [umbrella CONTRIBUTING](../CONTRIBUTING.md), the top-level source of truth; this document stands in a **delegation** relationship to it — anything not stated here follows the umbrella guide.
+> **Document status:** This guide defines contribution procedures, development environment, testing, and code-quality rules **specific** to the sonicbrew subproject. The org-wide common contribution guide is [umbrella CONTRIBUTING](../CONTRIBUTING.md), the top-level source of truth; this document stands in a **delegation** relationship to it — anything not stated here follows the umbrella guide.
 >
 > **Relationship (dependency direction):** `sonicbrew` (server) → `audio-toolkit` via relative path dependencies (`../audio-toolkit/crates/<name>`). sonicbrew and audio-toolkit are **sibling independent git repos**, and the umbrella is a conceptual workspace (not a repo). sonicbrew's gateways (`gw-*`) and `net-rtp-aes67` implement audio-toolkit's `AudioNode` trait (defined in `audio-core-bsd`) so they plug into the core graph (`audio-graph-bsd`) as nodes.
 >
@@ -39,14 +39,14 @@ cargo --version
 # === audio-toolkit path dependencies (sibling independent repo, crates/<name>/ convention) ===
 # LHS = crate name, RHS = path. Always the form ../audio-toolkit/crates/audio-*.
 audio-core-bsd     = { path = "../audio-toolkit/crates/audio-core-bsd" }      # shared AudioFrame/ProcessContext/AudioNode traits
-audio-graph-bsd    = { path = "../audio-toolkit/crates/audio-graph-bsd" }     # M02 Graph (add_node/link/process_cycle)
-audio-dsp-bsd      = { path = "../audio-toolkit/crates/audio-dsp-bsd" }       # M03 mixer/DSP
-audio-resample-bsd = { path = "../audio-toolkit/crates/audio-resample-bsd" }  # M04 rubato (RT-safe)
-audio-opus-bsd     = { path = "../audio-toolkit/crates/audio-opus-bsd" }      # M05 Opus encode/decode
-audio-codec-bsd    = { path = "../audio-toolkit/crates/audio-codec-bsd" }     # M06 symphonia containers
-audio-io-bsd       = { path = "../audio-toolkit/crates/audio-io-bsd" }        # M01 cpal backend
-audio-plugin-bsd   = { path = "../audio-toolkit/crates/audio-plugin-bsd" }    # M15 (P1)
-audio-clock-bsd    = { path = "../audio-toolkit/crates/audio-clock-bsd" }     # M16 clock-ptp (P2)
+audio-graph-bsd    = { path = "../audio-toolkit/crates/audio-graph-bsd" }     # Graph (add_node/link/process_cycle)
+audio-dsp-bsd      = { path = "../audio-toolkit/crates/audio-dsp-bsd" }       # mixer/DSP
+audio-resample-bsd = { path = "../audio-toolkit/crates/audio-resample-bsd" }  # rubato resampler (RT-safe)
+audio-opus-bsd     = { path = "../audio-toolkit/crates/audio-opus-bsd" }      # Opus encode/decode
+audio-codec-bsd    = { path = "../audio-toolkit/crates/audio-codec-bsd" }     # symphonia containers
+audio-io-bsd       = { path = "../audio-toolkit/crates/audio-io-bsd" }        # cpal backend
+audio-plugin-bsd   = { path = "../audio-toolkit/crates/audio-plugin-bsd" }    # plugin loader
+audio-clock-bsd    = { path = "../audio-toolkit/crates/audio-clock-bsd" }     # PTP clock
 audio-bluetooth-bsd = { path = "../audio-toolkit/crates/audio-bluetooth-bsd" } # BT A2DP input backend (audio-io-bsd AudioBackend impl, not an M0x module)
 ```
 
@@ -66,9 +66,9 @@ bhyve is recommended (VirtualBox also works). After installing FreeBSD 14.2-RELE
 
 | Port | Purpose | Related sonicbrew module |
 |------|------|------------------|
-| `audio/alsa-lib` | via the cpal ALSA backend (shared with audio-toolkit `audio-io-bsd` M01) | `gw-browser` (final output of the browser path) |
-| `audio/opus` | Opus encode/decode (audio-toolkit `audio-opus-bsd` M05, BSD-3) | `gw-browser` (codec subpath) |
-| `audio/libsndfile` | IR/sample loading (audio-toolkit `audio-codec-bsd` M06 file I/O) | (no sonicbrew module) |
+| `audio/alsa-lib` | via the cpal ALSA backend (shared with audio-toolkit `audio-io-bsd`) | `gw-browser` (final output of the browser path) |
+| `audio/opus` | Opus encode/decode (audio-toolkit `audio-opus-bsd`, BSD-3) | `gw-browser` (codec subpath) |
+| `audio/libsndfile` | IR/sample loading (audio-toolkit `audio-codec-bsd` file I/O) | (no sonicbrew module) |
 | `multimedia/libsrtp2` | SRTP (WebRTC/AES67 security) | `net-rtp-aes67`, `gw-browser` |
 | `security/openssl` | mTLS / DTLS-SRTP | `net-rtp-aes67`, `gw-browser`, `control-api` |
 | `net/libnetmap` | netmap zero-copy (RTP data plane) | `net-rtp-aes67` |
@@ -90,7 +90,7 @@ SONICBREW_CONTROL_API_KEY=local-dev-key
 
 ### 2.1 Gateway insertion principle (sonicbrew ↔ audio-toolkit integration) ★
 
-This is the **single touchpoint** where sonicbrew and audio-toolkit meet. All of sonicbrew's gateways (`gw-pulse`/`gw-alsa`/`gw-browser`) and `net-rtp-aes67` implement audio-toolkit's **`AudioNode` trait** (defined in `audio-core-bsd`) so they are inserted into the core graph (`audio-graph-bsd` M02) as Source/Sink nodes ([p10 §6.2](../notes/p10-architecture-design.md)).
+This is the **single touchpoint** where sonicbrew and audio-toolkit meet. All of sonicbrew's gateways (`gw-pulse`/`gw-alsa`/`gw-browser`) and `net-rtp-aes67` implement audio-toolkit's **`AudioNode` trait** (defined in `audio-core-bsd`) so they are inserted into the core graph (`audio-graph-bsd`) as Source/Sink nodes.
 
 - **What varies:** only the protocol parsers (WebSocket binary / PulseAudio / ALSA PCM / RTP packets).
 - **What stays fixed:** after conversion to `AudioFrame`, nodes are inserted via `audio-graph-bsd`'s `Graph::add_node` as `AudioNode`s.
@@ -164,10 +164,10 @@ docs(monitor): add metrics collection guide
 Crate names have **no** `mNN-` prefix. The `-p` argument takes the directory name (= crate name) as-is:
 
 ```bash
-cargo test -p session-store          # M07
-cargo test -p control-api            # M13
-cargo test -p gw-browser             # M12 ★ MVP core
-cargo test -p net-rtp-aes67          # M09 (P1)
+cargo test -p session-store
+cargo test -p control-api
+cargo test -p gw-browser   # ★ browser path core
+cargo test -p net-rtp-aes67
 ```
 
 ### 3.3 FreeBSD VM regression (mandatory)
@@ -187,18 +187,18 @@ Each gateway implements a compatible protocol, so real-client interoperability m
 
 | Gateway | Test method |
 |-----------|------------|
-| `gw-browser` (M12) | WebSocket clients (binary PCM/Opus frame send/receive) — including per-browser-version (Chromium/Firefox) regressions |
-| `gw-pulse` (M10) | PulseAudio clients such as `pactl`/`paplay` — protocol message deserialization verification |
-| `gw-alsa` (M11) | `aplay`/`arecord` ALSA clients — PCM plugin interface emulation verification |
+| `gw-browser` | WebSocket clients (binary PCM/Opus frame send/receive) — including per-browser-version (Chromium/Firefox) regressions |
+| `gw-pulse` | PulseAudio clients such as `pactl`/`paplay` — protocol message deserialization verification |
+| `gw-alsa` | `aplay`/`arecord` ALSA clients — PCM plugin interface emulation verification |
 
-> **WebSocket regression (MVP core):** the WebSocket subpath of `gw-browser` is the only browser entry point of the P12 prototype, so regression tests for connection, reconnection, and frame loss across browser versions are mandatory.
+> **WebSocket regression:** the WebSocket subpath of `gw-browser` is the only browser entry point, so regression tests for connection, reconnection, and frame loss across browser versions are mandatory.
 
 ### 3.5 Session consensus regression (session-store)
 
 ```bash
 # openraft single-node mode — WAL persistence + self-leader verification
 cargo test -p session-store
-# Distributed consensus (leader election/log replication) is out of MVP scope — a dedicated harness comes with the next phase (P1)
+# Distributed consensus (leader election/log replication) harness is future work
 ```
 
 ---
@@ -247,13 +247,13 @@ Crate layout rule: `crates/<kebab-name>/` (aligned with umbrella §4).
 
 | Crate path | ID | Layer |
 |--------------|-----|------|
-| `crates/session-store/` | M07 | L3 |
-| `crates/net-rtp-aes67/` | M09 | L4 |
-| `crates/gw-pulse/` | M10 | L5 |
-| `crates/gw-alsa/` | M11 | L5 |
-| `crates/gw-browser/` | M12 | L5 |
-| `crates/control-api/` | M13 | L5 |
-| `crates/monitor/` | M14 | L5 |
+| `crates/session-store/` |
+| `crates/net-rtp-aes67/` |
+| `crates/gw-pulse/` |
+| `crates/gw-alsa/` |
+| `crates/gw-browser/` |
+| `crates/control-api/` |
+| `crates/monitor/` |
 | `crates/sonicbrew/` | — | Binary (unified entry point) |
 
 ### 5.2 Trait implementation rules
@@ -305,7 +305,6 @@ This repo (sonicbrew) keeps **all project documents as regular (git-tracked) doc
 - [sonicbrew RUNBOOK](./docs/RUNBOOK.md) — build/run/operations guide
 - [umbrella TESTING-STANDARDS](../TESTING-STANDARDS.md) — FreeBSD bhyve regression standards (local)
 - [p10 unified architecture](../notes/p10-architecture-design.md) — single source of truth for trait contracts
-- [p11 MVP scope](../notes/p11-mvp-scope-design.md) — MVP/P12 milestones + handover
 
 ---
 

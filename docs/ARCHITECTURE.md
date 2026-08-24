@@ -10,15 +10,15 @@ sonicbrew is a **FreeBSD-based high-performance distributed audio server**. It t
 
 ## 2. Crate Layout (9 total: 8 lib + 1 bin)
 
-| Crate | Layer | Role |
-|----------|------|------|
-| `session-store` | L3 | `SessionStore` trait + `RaftEngine` (single-node, redb WAL) + `DistributedRaftEngine` (openraft 0.9 multi-node: leader election/log replication/snapshots) — the single source of truth for topology |
-| `net-rtp-aes67` | L4 | RTP RFC 3550 codec + L16/L24 framing + UDP transport + jitter buffer (wrap-aware reordering) + recv/send worker loops. netmap is `cfg(freebsd)` gated |
-| `gw-pulse` | L5 | PulseAudio native protocol parser + `PulseGateway`. libpulse FFI daemon handshake is future work (FreeBSD) |
-| `gw-alsa` | L5 | ALSA format domain + hw_params negotiation + `AlsaGateway`. libasound .so plugin is future work |
-| `gw-browser` | L5 | WebSocket gateway (tokio-tungstenite) + `RingSource`/`RingSink` + 6-byte wire format + Opus sub-path (`opus` feature) |
-| `control-api` | L5 | REST (axum): node/link CRUD + `GET /topology` + preset export/import + `NodeParams` typed params (20 kinds) — [REST-API.md](./REST-API.md) |
-| `monitor` | L5 | `MetricsRecorder` (latency p50/p99 + xruns) + Prometheus `/metrics` raw-HTTP |
+| Crate | Role |
+|----------|------|
+| `session-store` | `SessionStore` trait + `RaftEngine` (single-node, redb WAL) + `DistributedRaftEngine` (openraft 0.9 multi-node: leader election/log replication/snapshots) — the single source of truth for topology |
+| `net-rtp-aes67` | RTP RFC 3550 codec + L16/L24 framing + UDP transport + jitter buffer (wrap-aware reordering) + recv/send worker loops. netmap is `cfg(freebsd)` gated |
+| `gw-pulse` | PulseAudio native protocol parser + `PulseGateway`. libpulse FFI daemon handshake is future work (FreeBSD) |
+| `gw-alsa` | ALSA format domain + hw_params negotiation + `AlsaGateway`. libasound .so plugin is future work |
+| `gw-browser` | WebSocket gateway (tokio-tungstenite) + `RingSource`/`RingSink` + 6-byte wire format + Opus sub-path (`opus` feature) |
+| `control-api` | REST (axum): node/link CRUD + `GET /topology` + preset export/import + `NodeParams` typed params (20 kinds) — [REST-API.md](./REST-API.md) |
+| `monitor` | `MetricsRecorder` (latency p50/p99 + xruns) + Prometheus `/metrics` raw-HTTP |
 | `audio-engine` | runtime | `GraphEngine` (process+flush+swap) + `build_graph` + `GatewayBridge` (survives rebuilds) + `spawn_rebuild_task` (TopologyEvent-driven) + **20 audio nodes** — [AUDIO-NODES.md](./AUDIO-NODES.md) |
 | `sonicbrew` (bin) | — | Integrated entry point. Default mode + `--server-engine` (live reload) — [RUNBOOK.md](./RUNBOOK.md) |
 
@@ -26,21 +26,21 @@ sonicbrew is a **FreeBSD-based high-performance distributed audio server**. It t
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ L5 · API/Gateways (sonicbrew)                               │
+│ APIs & Gateways (sonicbrew)                                 │
 │   gw-pulse · gw-alsa · gw-browser · control-api · monitor   │
 ├─────────────────────────────────────────────────────────────┤
-│ L4 · Network Protocols                                      │
+│ Network Protocols                                           │
 │   net-rtp-aes67(sonicbrew) · audio-opus/audio-codec(toolkit)│
 ├─────────────────────────────────────────────────────────────┤
-│ L3 · Session/Persistence (sonicbrew)                        │
+│ Session & Persistence (sonicbrew)                           │
 │   session-store (Raft consensus + WAL)                      │
 ├═════════════════════════════════════════════════════════════╡
 │    ▲▼ AudioNode trait (audio-core-bsd) — insertion contract │
 ├─────────────────────────────────────────────────────────────┤
-│ L2 · Core Graph/DSP (audio-toolkit)                         │
+│ Core Graph & DSP (audio-toolkit)                            │
 │   audio-graph-bsd · audio-dsp-bsd · audio-resample-bsd      │
 ├─────────────────────────────────────────────────────────────┤
-│ L1 · Kernel Interface (audio-toolkit)                       │
+│ Kernel Interface (audio-toolkit)                            │
 │   audio-io-bsd (OSS /dev/dsp + cpal ALSA)                   │
 └─────────────────────────────────────────────────────────────┘
 ```

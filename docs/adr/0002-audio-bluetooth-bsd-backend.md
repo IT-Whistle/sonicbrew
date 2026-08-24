@@ -16,18 +16,18 @@ rtrb ring (`BtInputSource`). The OSS/daemon FFI is gated behind
 `cfg(target_os = "freebsd")` so the pure logic compiles and tests on the Linux dev host.
 
 Until now `sonicbrew`'s documentation and dependency roster described audio-toolkit as
-**9 crates** (`audio-core-bsd` + M01–M06 + `audio-plugin-bsd`(M15) +
-`audio-clock-bsd`(M16)) and made **no mention** of `audio-bluetooth-bsd`. This was a
+**9 crates** (`audio-core-bsd` + the processing crates + `audio-plugin-bsd` +
+`audio-clock-bsd`)) and made **no mention** of `audio-bluetooth-bsd`. This was a
 documentation gap, not a design gap: `audio-bluetooth-bsd` is **not a sonicbrew module**
-(the M07–M14 roster has no bluetooth slot). Bluetooth audio enters sonicbrew exactly like
-any other audio device — through the **L1 backend abstraction** (`audio-io-bsd`), not as
-an L5 gateway.
+(the sonicbrew roster has no bluetooth slot). Bluetooth audio enters sonicbrew exactly like
+any other audio device — through the backend abstraction (`audio-io-bsd`), not as
+a gateway.
 
 Two related facts necessitate recording the decision explicitly:
 
 1. A *browser* transport variant named `BrowserTransport::WebRTC` exists in `gw-browser`
-   (M12). The name resemblance invites confusion with "bluetooth audio", but the two are
-   **unrelated** — WebRTC is a browser send/receive transport stub (P1, after the
+   (the browser gateway). The name resemblance invites confusion with "bluetooth audio", but the two are
+   **unrelated** — WebRTC is a browser send/receive transport stub (future, after the
    WebSocket MVP). This ADR documents the distinction so future contributors do not
    conflate them.
 2. `sonicbrew` consumes
@@ -41,10 +41,10 @@ Two related facts necessitate recording the decision explicitly:
 1. **Acknowledge `audio-bluetooth-bsd`** (0.1.0) as an **available optional** audio-toolkit
    backend, consumed through the **`audio-io-bsd` `AudioBackend` abstraction**. It is
    **not** a sonicbrew module (M0x) and is **not** registered as a `gw-*` gateway node —
-   it is an L1 input source, identical in role to a generic OSS/cpal capture device.
+   it is a kernel-level input source, identical in role to a generic OSS/cpal capture device.
 2. **Documentation corrected** (README/ARCHITECTURE/CONTRIBUTING): the audio-toolkit roster
-   is updated from 9 → 10 crates, and the L1-backend entry path is recorded.
-3. **`BrowserTransport::WebRTC` (M12) is browser-only** and distinct from bluetooth input;
+   is updated from 9 → 10 crates, and the backend entry path is recorded.
+3. **`BrowserTransport::WebRTC` is browser-only** and distinct from bluetooth input;
    the docs now state this explicitly.
 4. **Feature-gated integration:** when sonicbrew later wires Bluetooth capture in, the
    dependency and code path will live behind a **`bluetooth`** feature (default off) on the

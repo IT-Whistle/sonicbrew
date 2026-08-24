@@ -1,6 +1,6 @@
 # sonicbrew Subproject Test Coverage Matrix (TEST-LAYERS)
 
-> **Document type:** **Layer-by-layer test coverage matrix** for the sonicbrew server modules (M07·M09–M14 + binary). Applies the umbrella heatmap policy ([`../../docs/test-coverage-heatmap.html`](../../docs/test-coverage-heatmap.html)) and the 5-layer pyramid of [TESTING-STANDARDS.md](../../TESTING-STANDARDS.md) to the sonicbrew subproject.
+> **Document type:** **Layer-by-layer test coverage matrix** for the sonicbrew server modules. Applies the umbrella heatmap policy ([`../../docs/test-coverage-heatmap.html`](../../docs/test-coverage-heatmap.html)) and the 5-layer pyramid of [TESTING-STANDARDS.md](../../TESTING-STANDARDS.md) to the sonicbrew subproject.
 >
 > **Baseline date:** 2026-08-17 (updated) · **Tests:** **566 unit/integration/property tests + 5 self-tests + 7 criterion benches + 2 cargo-fuzz targets** — fmt/clippy(`-D warnings`)/FreeBSD `cargo check` all GREEN
 > **Scope:** This document is limited to the 7 sonicbrew modules + audio-engine. For the 10 audio-toolkit crates, refer to the umbrella heatmap.
@@ -27,13 +27,13 @@
 
 | Module | Unit | Property | Integration | RT-safety | Audio Q | Concurrency | Protocol | Performance | FreeBSD | Sanitizer | Test count |
 |------|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| **M07** session-store | **i4✓** | **i3✓** | **i4✓** | ✕ | ✕ | **i5✓** | ✕ | i3(bench) | **i2✓** | — | **34** |
-| **M09** net-rtp-aes67 | **i4✓** | **i3✓** | **i4✓** | — | — | i2 | **i5✓** | **i4✓**(bench) | i1 | **i4✓** | **98** |
-| **M10** gw-pulse | **i4✓** | — | i2 | — | — | — | **i5✓** | — | i1 | **i4✓** | **82** |
-| **M11** gw-alsa | **i4✓** | — | i2 | — | — | — | **i4✓** | — | i1 | **i3✓** | **79** |
-| **M12** gw-browser | **i4✓** | — | **i5✓** | **i3✓** | — | i2 | **i4✓** | **i4✓**(bench) | i1 | **i4✓** | **60** |
-| **M13** control-api | **i4✓** | — | **i4✓** | ✕ | ✕ | **i4✓** | ✕ | — | i1 | **i3✓** | **84** |
-| **M14** monitor | **i3✓** | — | **i3✓** | ✕ | ✕ | — | ✕ | **i3✓** | i1 | — | **14** |
+| session-store | **i4✓** | **i3✓** | **i4✓** | ✕ | ✕ | **i5✓** | ✕ | i3(bench) | **i2✓** | — | **34** |
+| net-rtp-aes67 | **i4✓** | **i3✓** | **i4✓** | — | — | i2 | **i5✓** | **i4✓**(bench) | i1 | **i4✓** | **98** |
+| gw-pulse | **i4✓** | — | i2 | — | — | — | **i5✓** | — | i1 | **i4✓** | **82** |
+| gw-alsa | **i4✓** | — | i2 | — | — | — | **i4✓** | — | i1 | **i3✓** | **79** |
+| gw-browser | **i4✓** | — | **i5✓** | **i3✓** | — | i2 | **i4✓** | **i4✓**(bench) | i1 | **i4✓** | **60** |
+| control-api | **i4✓** | — | **i4✓** | ✕ | ✕ | **i4✓** | ✕ | — | i1 | **i3✓** | **84** |
+| monitor | **i3✓** | — | **i3✓** | ✕ | ✕ | — | ✕ | **i3✓** | i1 | — | **14** |
 | **audio-engine** | **i4✓** | — | **i4✓** | **i3✓** | **i4✓** | **i3✓** | ✕ | — | i1 | — | **84** |
 | **bin** sonicbrew | — | ✕ | **i5✓**(self-test) | i3(self-test) | — | — | — | i3(self-test) | i1 | — | **5 self-test** |
 
@@ -57,14 +57,14 @@ audio-engine is sonicbrew's runtime orchestration layer, containing 23 `AudioNod
 
 | Layer | sonicbrew application | Representative tests |
 |-------|---------------|-----------|
-| **Layer 0 unit** | inline `#[test]` in all modules | M07 WAL restore, M09 RTP header, M13 REST response codes, audio-engine per-node DSP verification |
-| **Layer 1 integration** | `#[tokio::test]` in `tests/` directories | M07 cluster.rs (3-node), M12 ws_to_graph, M13 rest_api (84), audio-engine node_pipeline.rs (chaining) |
-| **Layer 2 property** | proptest | M07 Mutation round-trip/WAL idempotency, M09 L16/RTP round-trip, M10/M11/M13 sanitizer proptest |
-| **Layer 3 performance** | criterion microbenchmarks + self-test | M12 ws_round_trip (3), M09 rtp_codec (4), M14 percentile/bulk samples, bin --self-test 3µs |
+| **Layer 0 unit** | inline `#[test]` in all modules | session-store WAL restore, RTP header parsing, REST response codes, audio-engine per-node DSP verification |
+| **Layer 1 integration** | `#[tokio::test]` in `tests/` directories | session-store cluster.rs (3-node), gw-browser ws_to_graph, control-api rest_api (84), audio-engine node_pipeline.rs (chaining) |
+| **Layer 2 property** | proptest | session-store Mutation round-trip/WAL idempotency, RTP L16 round-trip, gateway/control-api sanitizer proptests |
+| **Layer 3 performance** | criterion microbenchmarks + self-test | gw-browser ws_round_trip (3), rtp_codec (4), monitor percentile/bulk samples, bin --self-test 3µs |
 | **Layer 4 FreeBSD regression** | native execution on a dedicated test machine (15.1-RELEASE-p2, amd64) | ✅ **build + tests 556/556 + 5 self-tests + server smoke (REST/persistence) passed** (2026-08-17, rust 1.96.1). Continuous regression CI to follow |
 
 ### Sanitizer/Fuzz layer (heatmap method 10)
-- M09/M10/M11/M12/M13: proptest-based no-panic guarantees on malformed/random inputs + deterministic edge cases (oversized frames, truncated headers, full tag sweep).
+- Net/gateway modules: proptest-based no-panic guarantees on malformed/random inputs + deterministic edge cases (oversized frames, truncated headers, full tag sweep).
 - **cargo-fuzz targets (nightly)**: `gw-browser/fuzz/fuzz_targets/ws_parser.rs` + `net-rtp-aes67/fuzz/fuzz_targets/rtp_packet_parser.rs` — libFuzzer coverage-guided fuzzing.
 
 ---
@@ -103,10 +103,10 @@ cargo run -p sonicbrew -- --gateway-live-reload-test
 
 | Cell | Target | Current | Notes |
 |----|:---:|:---:|------|
-| M12 Protocol/Sanitizer | i5 | i4/i5 | WS RFC 6455 masking/fragmentation tests need to be added; cargo-fuzz target set up (nightly run) |
-| M09 FreeBSD/Sanitizer | i5 | **i4✓**/i4 | native stats (98/98) + netmap probe (API 14, vmx0/VALE geometry) + ring TX (`nm_port_test`) + **full RTP loopback through the kernel VALE switch (`vale_loopback`, 8/8 bit-exact — zero-copy path verified end-to-end)**. Added to the regression suite as §8 |
+| gw-browser Protocol/Sanitizer | i5 | i4/i5 | WS RFC 6455 masking/fragmentation tests need to be added; cargo-fuzz target set up (nightly run) |
+| net-rtp FreeBSD/Sanitizer | i5 | **i4✓**/i4 | native stats (98/98) + netmap probe (API 14, vmx0/VALE geometry) + ring TX (`nm_port_test`) + **full RTP loopback through the kernel VALE switch (`vale_loopback`, 8/8 bit-exact — zero-copy path verified end-to-end)**. Added to the regression suite as §8 |
 | bin FreeBSD | i5 | **i3✓** | Native: build + tests + 5 self-tests + server smoke (live reload/persistence) + gw-pulse handshake (real PA 17.0) + gw-alsa aplay streaming passed. Nightly regression CI to follow |
-| AES67 full compliance | — | out of scope | SAP/SDP, FEC, SRTP, PTP M16 — upon distributed expansion |
+| AES67 full compliance | — | out of scope | SAP/SDP, FEC, SRTP, PTP — upon distributed expansion |
 
 ---
 

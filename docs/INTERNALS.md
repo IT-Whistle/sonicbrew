@@ -476,7 +476,7 @@ WAL-first (insert + commit before `snapshot.apply`), then a best-effort
 aspirational: a single node is trivially its own leader, and there is no
 election, no log replication, no snapshot shipping.
 
-### Multi-node: `DistributedRaftEngine` (P1, openraft 0.9.25)
+### Multi-node: `DistributedRaftEngine` (openraft 0.9.25)
 
 The real consensus engine (session-store/src/distributed.rs + the four
 `raft_*` modules, per ADR-0003):
@@ -529,7 +529,7 @@ sides get exactly that and nothing heavier.
   pre-allocated to `LATENCY_WINDOW = 1024` samples, so the first window-full
   of pushes never reallocates. `record` is a bounded `push_back` + optional
   `pop_front` — O(1) under the lock. (A lock-free sharded histogram is a
-  documented later optimization; the `std::Mutex` is the accepted P1 cost.)
+  documented later optimization; the `std::Mutex` is the accepted cost.)
 - **Two entry points.** `record_cycle(us)` (inherent, *not* on the trait) is
   what `sonicbrew-rt` calls once per cycle with the measured step time.
   `record_latency(p50, p99)` (the `MetricsSink` trait method) serves callers
@@ -576,7 +576,7 @@ and out of the graph — from three different host ecosystems, so their
 transports, process models, and insertion contracts differ sharply. The
 table is the map; the notes under it are the territory.
 
-| | gw-browser (M12) | gw-pulse (M10) | gw-alsa (M11/P2) |
+| | gw-browser | gw-pulse | gw-alsa |
 |---|---|---|---|
 | **Transport** | WebSocket (tokio-tungstenite), binary frames: 6-byte LE header (`codec_tag u8` 0=PCM/1=Opus, `channels u8`, `sample_rate u32`) + planar f32 payload | PulseAudio **native protocol v35** over a Unix socket (`$PULSE_SERVER` → `$XDG_RUNTIME_DIR/pulse/native` → `/var/run/pulse/native` …), pure Rust — **no libpulse** | libasound **ioplug `.so`** (`libasound_module_pcm_sonicbrew.so`) `dlopen`ed inside the ALSA client, bridging over **local TCP** with a 5-word handshake (`BRIDGE_MAGIC 0x5342_4E52`, proto version, stream dir, channels, rate) |
 | **Process model** | async tokio task per server (`serve_with_io` closures over an `Arc<GatewayBridge>`); decode/encode off the RT thread | blocking I/O with a 5 s timeout; must be driven from a worker thread only | in-process inside the *client* application: libasound calls the plugin's `transfer` callback synchronously; eager connect (`snd_pcm_open` fails `-EIO` when no bridge answers) |

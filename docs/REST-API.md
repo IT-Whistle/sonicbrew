@@ -1,6 +1,6 @@
 # sonicbrew REST API Reference
 
-> Control plane of control-api (M13). Base address `127.0.0.1:9002` (change with `--api-addr`). Prometheus metrics are on a separate port, `9003` (`GET /metrics`).
+> Control plane of control-api. Base address `127.0.0.1:9002` (change with `--api-addr`). Prometheus metrics are on a separate port, `9003` (`GET /metrics`).
 
 ## Endpoint Summary
 

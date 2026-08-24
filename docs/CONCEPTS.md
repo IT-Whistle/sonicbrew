@@ -402,7 +402,7 @@ clock sync, multicast distribution, and SAP/SDP session announcement.
 | UDP transport + send/recv worker loops | have |
 | Wrap-aware jitter buffer | have |
 | Zero-copy netmap/VALE dataplane (FreeBSD) | have (`cfg(freebsd)`) |
-| PTP (IEEE 1588) clock alignment | not yet (P1 out of scope) |
+| PTP (IEEE 1588) clock alignment | not yet (out of scope) |
 | Multicast + SAP/SDP session announcement | not yet |
 | FEC, SRTP/DTLS | not yet |
 
@@ -646,7 +646,7 @@ installs the snapshot and then replays only the log entries after it.
 - **`RaftEngine`** (MVP): one process is its own authoritative log — an
   in-memory `TopologySnapshot` backed by a redb WAL; no voting, no
   network, fully synchronous calls.
-- **`DistributedRaftEngine`** (P1, ADR-0003): wraps an
+- **`DistributedRaftEngine`** (ADR-0003): wraps an
   `Arc<Raft<TypeConfig>>` running on a tokio runtime. openraft is fully
   async while `SessionStore` is sync, so `apply_mutation` bridges by
   *spawning* `client_write` on the runtime `Handle` and blocking on a
@@ -725,7 +725,7 @@ parameters; deleting the WAL loses the graph.
 
 ### The REST resource model
 
-M13 exposes the graph as plain REST over axum/hyper (gRPC deliberately
+control-api exposes the graph as plain REST over axum/hyper (gRPC deliberately
 skipped in the MVP):
 
 ```text
@@ -739,7 +739,7 @@ POST   /preset   body Preset          →   204 | 4xx
 ```
 
 `load_module` exists on the trait but returns `Unimplemented` — the MVP is
-statically linked; hot plugin loading is M15. New node ids are derived as
+statically linked; hot plugin loading is future work. New node ids are derived as
 `max(existing node ids) + 1` (0 when the graph is empty) — deterministic
 and observable through `get_topology`. Labels and kinds, which
 `NodeSnapshot` also lacks, ride in the controller's side registries with a
